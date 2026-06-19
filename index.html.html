@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acompanhamento Empresas Gestão Online</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+*{box-sizing:border-box}body{font-family:Arial;background:#f4f4f4;padding:20px;margin:0}.box{background:#fff;padding:20px;border-radius:10px;max-width:1400px;margin:auto;margin-bottom:18px;overflow:auto}.login{max-width:600px;margin:40px auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}input,button,select{padding:10px;font-size:14px}button{background:#1976d2;color:#fff;border:none;border-radius:6px;cursor:pointer}button:hover{background:#125ea8}button:disabled{opacity:.6;cursor:not-allowed}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:8px;text-align:center;font-size:13px}th{background:#1976d2;color:#fff}.acoes button{margin:2px}.barra{max-width:1400px;margin:0 auto 12px auto;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.msg{font-weight:bold;color:#333}.cards{display:flex;gap:10px;margin:15px 0;flex-wrap:wrap}.card{background:#e3f2fd;padding:12px;border-radius:8px;min-width:170px;text-align:center;font-weight:bold}.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:99}.modal-content{background:#fff;padding:20px;border-radius:8px;max-width:600px;margin:5% auto}.small{font-size:12px;color:#555}
+</style>
+</head>
+<body>
+<div id="loginBox" class="box login">
+<h2>Login - Acompanhamento Empresas Gestão</h2>
+<p>Digite o e-mail cadastrado na aba <b>Usuarios</b>.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><input id="emailLogin" type="email" placeholder="seuemail@gmail.com" style="flex:1"><button onclick="fazerLogin()" style="flex:1">Entrar</button></div>
+<p id="msgLogin" class="msg"></p>
+</div>
+
+<div id="appBox" style="display:none">
+<div class="barra"><div><b>Usuário:</b> <span id="usuarioInfo"></span></div><div><button onclick="carregarDados()">Atualizar</button> <button onclick="sair()">Sair</button></div></div>
+<div class="box">
+<h2>ACOMPANHAMENTO EMPRESAS GESTÃO</h2>
+<button type="button" onclick="abrirCadastroEmpresas()">Cadastro de Empresas</button><br><br>
+<div class="grid">
+<input id="responsavelSomesso" placeholder="Responsável Somesso">
+<input id="cnpj" placeholder="CNPJ">
+<input id="empresa" placeholder="Empresa">
+<input id="email" type="email" placeholder="E-mail">
+<input id="telefone" placeholder="Telefone">
+<input id="responsavelEmpresa" placeholder="Responsável pela Empresa">
+<select id="palestras"><option value="">Palestras Anuais</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+<select id="s2210"><option value="">Envio S-2210</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+<select id="s2220"><option value="">Envio S-2220</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+<select id="s2240"><option value="">Envio S-2240</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+<select id="aso"><option value="">Informação ASO's a vencer</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+<select id="renovacao"><option value="">Renovação Automática</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
+</div><br>
+<div style="display:flex;gap:10px;flex-wrap:wrap;"><button id="btnAdicionar" type="button" onclick="adicionar()">Adicionar</button><button id="btnCancelar" type="button" onclick="cancelarEdicao()" style="display:none;background:#777">Cancelar edição</button><button type="button" onclick="exportarExcel()">Exportar Excel</button><button type="button" onclick="gerarPDF()">Gerar PDF</button></div>
+<p id="msgSistema" class="msg"></p>
+<div class="cards"><div class="card">Total de Empresas<br><span id="ct">0</span></div><div class="card">Palestras: Sim<br><span id="cp">0</span></div><div class="card">Renovação: Sim<br><span id="cr">0</span></div></div>
+<input id="filtro" placeholder="Pesquisar..." style="width:100%;padding:10px;">
+<table id="tab"><thead><tr><th>Responsável Somesso</th><th>CNPJ</th><th>Empresa</th><th>E-mail</th><th>Telefone</th><th>Responsável Empresa</th><th>Palestras</th><th>S-2210</th><th>S-2220</th><th>S-2240</th><th>ASO</th><th>Renovação</th><th>Ações</th></tr></thead><tbody id="tb"></tbody></table>
+</div>
+</div>
+
+<div id="modalEmpresas" class="modal"><div class="modal-content"><h3>Cadastro de Empresas</h3><div class="grid"><input id="cadCnpj" placeholder="CNPJ"><input id="cadEmpresa" placeholder="Empresa"><input id="cadEmail" placeholder="E-mail"><input id="cadTelefone" placeholder="Telefone"><input id="cadResponsavel" placeholder="Responsável pela Empresa"></div><br><button onclick="salvarCadastroEmpresa()">Salvar</button> <button onclick="fecharCadastroEmpresas()" style="background:#777">Fechar</button><p class="small">Após salvar, ao preencher o CNPJ no formulário principal, os dados serão carregados automaticamente.</p></div></div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbyEcifHlp3y6VCMbp68PzRZi3dNt-Y1gtvdTJjJ5WLPwVWcvUaLE9ue_Xa0uBoIN_SKBw/exec';
+let itens = [];
+let empresas = [];
+let editandoId = null;
+let usuarioLogado = null;
+
+async function api(acao, dados={}){
+  const resp = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({acao, ...dados})});
+  const txt = await resp.text();
+  try{return JSON.parse(txt)}catch(e){console.error(txt);throw new Error('Resposta inválida da API')}
+}
+async function fazerLogin(){
+  const email = emailLogin.value.trim().toLowerCase();
+  if(!email){alert('Digite seu e-mail.');return}
+  msgLogin.textContent='Verificando acesso...';
+  try{
+    const r = await api('login',{email});
+    if(!r.ok){msgLogin.textContent=r.erro||'Acesso negado';return}
+    usuarioLogado = r.usuario;
+    localStorage.setItem('usuario_gestao_email', email);
+    loginBox.style.display='none'; appBox.style.display='block';
+    usuarioInfo.textContent = `${usuarioLogado.nome} - ${usuarioLogado.perfil}`;
+    await carregarDados();
+  }catch(e){msgLogin.textContent='Erro ao conectar com a API: '+e.message}
+}
+function sair(){localStorage.removeItem('usuario_gestao_email');location.reload()}
+async function carregarDados(){
+  msgSistema.textContent='Carregando dados...';
+  try{
+    const r = await api('listar');
+    itens = (r.gestao || []).map(normalizarGestao);
+    empresas = (r.empresas || []).map(normalizarEmpresa);
+    render(); msgSistema.textContent='Dados atualizados.';
+  }catch(e){msgSistema.textContent='Erro ao carregar dados: '+e.message}
+}
+function normalizarGestao(x){return {id:x.ID||x.id||'',responsavelSomesso:x['Responsável Somesso']||x.responsavelSomesso||'',cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||'',responsavelEmpresa:x['Responsável Empresa']||x.responsavelEmpresa||'',palestras:x.Palestras||x.palestras||'',s2210:x['S-2210']||x.s2210||'',s2220:x['S-2220']||x.s2220||'',s2240:x['S-2240']||x.s2240||'',aso:x.ASO||x.aso||'',renovacao:x['Renovação']||x.renovacao||''}}
+function normalizarEmpresa(x){return {cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',email:x.Email||x.email||'',telefone:x.Telefone||x.telefone||'',responsavelEmpresa:x['Responsável Empresa']||x.responsavelEmpresa||''}}
+function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+function limparCNPJ(v){return String(v||'').replace(/\D/g,'')}
+function render(){
+  tb.innerHTML=''; let f=filtro.value.toLowerCase().trim(); let palestrasSim=0, renovacaoSim=0;
+  itens.forEach((item,index)=>{
+    if(String(item.palestras).toLowerCase()==='sim') palestrasSim++;
+    if(String(item.renovacao).toLowerCase()==='sim') renovacaoSim++;
+    let texto=Object.values(item).join(' ').toLowerCase(); if(f && !texto.includes(f)) return;
+    tb.innerHTML += `<tr><td>${esc(item.responsavelSomesso)}</td><td>${esc(item.cnpj)}</td><td>${esc(item.empresa)}</td><td>${esc(item.email)}</td><td>${esc(item.telefone)}</td><td>${esc(item.responsavelEmpresa)}</td><td>${esc(item.palestras)}</td><td>${esc(item.s2210)}</td><td>${esc(item.s2220)}</td><td>${esc(item.s2240)}</td><td>${esc(item.aso)}</td><td>${esc(item.renovacao)}</td><td class="acoes"><button onclick="editar(${index})">Editar</button><button onclick="excluirItem('${item.id}')">Excluir</button></td></tr>`;
+  });
+  ct.innerText=itens.length; cp.innerText=palestrasSim; cr.innerText=renovacaoSim;
+}
+function limparCampos(){['responsavelSomesso','cnpj','empresa','email','telefone','responsavelEmpresa','palestras','s2210','s2220','s2240','aso','renovacao'].forEach(id=>document.getElementById(id).value='')}
+async function adicionar(){
+  let obj={id:editandoId||'',responsavelSomesso:responsavelSomesso.value.trim(),cnpj:cnpj.value.trim(),empresa:empresa.value.trim(),email:email.value.trim(),telefone:telefone.value.trim(),responsavelEmpresa:responsavelEmpresa.value.trim(),palestras:palestras.value,s2210:s2210.value,s2220:s2220.value,s2240:s2240.value,aso:aso.value,renovacao:renovacao.value};
+  for(let k in obj){if(k!=='id' && !obj[k]){alert('Preencha todos os campos.');return}}
+  btnAdicionar.disabled=true; msgSistema.textContent='Salvando...';
+  try{let r=await api('salvarGestao',obj); if(!r.ok){alert(r.erro||'Erro ao salvar.');return} editandoId=null; btnAdicionar.innerText='Adicionar'; btnCancelar.style.display='none'; limparCampos(); await carregarDados(); alert('Registro salvo com sucesso!');}
+  catch(e){alert('Erro ao salvar: '+e.message)} finally{btnAdicionar.disabled=false}
+}
+function editar(index){let item=itens[index]; editandoId=item.id; responsavelSomesso.value=item.responsavelSomesso; cnpj.value=item.cnpj; empresa.value=item.empresa; email.value=item.email; telefone.value=item.telefone; responsavelEmpresa.value=item.responsavelEmpresa; palestras.value=item.palestras; s2210.value=item.s2210; s2220.value=item.s2220; s2240.value=item.s2240; aso.value=item.aso; renovacao.value=item.renovacao; btnAdicionar.innerText='Salvar Edição'; btnCancelar.style.display='inline-block'; window.scrollTo({top:0,behavior:'smooth'})}
+function cancelarEdicao(){editandoId=null; btnAdicionar.innerText='Adicionar'; btnCancelar.style.display='none'; limparCampos()}
+async function excluirItem(id){if(!confirm('Deseja excluir este registro?'))return; msgSistema.textContent='Excluindo...'; try{await api('excluirGestao',{id}); await carregarDados();}catch(e){alert('Erro ao excluir: '+e.message)}}
+function abrirCadastroEmpresas(){modalEmpresas.style.display='block'} function fecharCadastroEmpresas(){modalEmpresas.style.display='none'}
+async function salvarCadastroEmpresa(){let obj={cnpj:limparCNPJ(cadCnpj.value),empresa:cadEmpresa.value.trim(),email:cadEmail.value.trim(),telefone:cadTelefone.value.trim(),responsavelEmpresa:cadResponsavel.value.trim()}; if(obj.cnpj.length!==14){alert('CNPJ inválido');return} for(let k in obj){if(!obj[k]){alert('Preencha todos os campos da empresa.');return}} try{let r=await api('salvarEmpresa',obj); if(!r.ok){alert(r.erro||'Erro ao salvar empresa.');return} fecharCadastroEmpresas(); cadCnpj.value=cadEmpresa.value=cadEmail.value=cadTelefone.value=cadResponsavel.value=''; await carregarDados(); alert('Empresa cadastrada com sucesso!')}catch(e){alert('Erro ao salvar empresa: '+e.message)}}
+cnpj.addEventListener('blur',function(){let c=limparCNPJ(this.value); let emp=empresas.find(e=>limparCNPJ(e.cnpj)===c); if(emp){empresa.value=emp.empresa; email.value=emp.email; telefone.value=emp.telefone; responsavelEmpresa.value=emp.responsavelEmpresa}});
+filtro.addEventListener('keyup', render);
+function exportarExcel(){let dados=itens.map(item=>({'Responsável Somesso':item.responsavelSomesso,'CNPJ':item.cnpj,'Empresa':item.empresa,'E-mail':item.email,'Telefone':item.telefone,'Responsável Empresa':item.responsavelEmpresa,'Palestras':item.palestras,'S-2210':item.s2210,'S-2220':item.s2220,'S-2240':item.s2240,'ASO':item.aso,'Renovação':item.renovacao}));let ws=XLSX.utils.json_to_sheet(dados);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gestão');XLSX.writeFile(wb,'acompanhamento_empresas.xlsx')}
+function gerarPDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF('landscape');doc.text('Acompanhamento Empresas Gestão',14,15);let rows=itens.map(item=>[item.responsavelSomesso,item.cnpj,item.empresa,item.email,item.telefone,item.responsavelEmpresa,item.palestras,item.s2210,item.s2220,item.s2240,item.aso,item.renovacao]);doc.autoTable({startY:25,head:[['Responsável','CNPJ','Empresa','Email','Telefone','Resp. Empresa','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],body:rows,styles:{fontSize:7}});doc.save('acompanhamento_empresas.pdf')}
+window.addEventListener('load',()=>{let email=localStorage.getItem('usuario_gestao_email'); if(email) emailLogin.value=email;});
+</script>
+</body>
+</html>
