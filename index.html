@@ -350,7 +350,16 @@ async function carregarDados(){
   }catch(e){msgSistema.textContent='Erro ao carregar dados: '+e.message}
 }
 function normalizarGestao(x){return {id:x.ID||x.id||'',responsavelSomesso:x['Responsável Somesso']||x.responsavelSomesso||'',cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||'',responsavelEmpresa:x['Responsável Empresa']||x.responsavelEmpresa||'',palestras:x.Palestras||x.palestras||'',s2210:x['S-2210']||x.s2210||'',s2220:x['S-2220']||x.s2220||'',s2240:x['S-2240']||x.s2240||'',aso:x.ASO||x.aso||'',renovacao:x['Renovação']||x.renovacao||''}}
-function normalizarEmpresa(x){return {cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',email:x.Email||x.email||'',telefone:x.Telefone||x.telefone||'',responsavelEmpresa:x['Responsável Empresa']||x.responsavelEmpresa||''}}
+function normalizarEmpresa(x){
+  return {
+    cnpj:x.CNPJ||x.cnpj||'',
+    empresa:x.Empresa||x.empresa||'',
+    contato:x.Contato||x.contato||'',
+    email:x.Email||x['E-mail']||x.email||'',
+    telefone:x.Telefone||x.telefone||'',
+    responsavelEmpresa:x['Responsável pela Empresa']||x['Responsável Empresa']||x.responsavelEmpresa||''
+  }
+}
 function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function limparCNPJ(v){return String(v||'').replace(/\D/g,'')}
 function itensVisiveis(){
