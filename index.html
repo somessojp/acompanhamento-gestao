@@ -225,7 +225,7 @@ a:hover{
 <input id="empresa" placeholder="Empresa">
 <input id="email" type="email" placeholder="E-mail">
 <input id="telefone" placeholder="Telefone">
-<input id="responsavelEmpresa" placeholder="Responsável pela Empresa">
+<input id="contato" placeholder="Contato">
 <select id="palestras"><option value="">Palestras Anuais</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
 <select id="s2210"><option value="">Envio S-2210</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
 <select id="s2220"><option value="">Envio S-2220</option><option value="Sim">Sim</option><option value="Não">Não</option></select>
@@ -244,11 +244,11 @@ a:hover{
 <option value="Tamilla Pereira">Tamilla Pereira</option>
 </select>
 </div>
-<table id="tab"><thead><tr><th>Responsável Somesso</th><th>CNPJ</th><th>Empresa</th><th>E-mail</th><th>Telefone</th><th>Responsável Empresa</th><th>Palestras</th><th>S-2210</th><th>S-2220</th><th>S-2240</th><th>ASO</th><th>Renovação</th><th>Ações</th></tr></thead><tbody id="tb"></tbody></table>
+<table id="tab"><thead><tr><th>Responsável Somesso</th><th>CNPJ</th><th>Empresa</th><th>E-mail</th><th>Telefone</th><th>Contato</th><th>Palestras</th><th>S-2210</th><th>S-2220</th><th>S-2240</th><th>ASO</th><th>Renovação</th><th>Ações</th></tr></thead><tbody id="tb"></tbody></table>
 </div>
 </div>
 
-<div id="modalEmpresas" class="modal"><div class="modal-content"><h3>Cadastro de Empresas</h3><div class="grid"><input id="cadCnpj" placeholder="CNPJ"><input id="cadEmpresa" placeholder="Empresa"><input id="cadEmail" placeholder="E-mail"><input id="cadTelefone" placeholder="Telefone"><input id="cadResponsavel" placeholder="Responsável pela Empresa"></div><br><button onclick="salvarCadastroEmpresa()">Salvar</button> <button onclick="fecharCadastroEmpresas()" style="background:#777">Fechar</button><p class="small">Após salvar, ao preencher o CNPJ no formulário principal, os dados serão carregados automaticamente.</p></div></div>
+<div id="modalEmpresas" class="modal"><div class="modal-content"><h3>Cadastro de Empresas</h3><div class="grid"><input id="cadCnpj" placeholder="CNPJ"><input id="cadEmpresa" placeholder="Empresa"><input id="cadContato" placeholder="Contato"><input id="cadTelefone" placeholder="Telefone"><input id="cadEmail" placeholder="E-mail"></div><br><button onclick="salvarCadastroEmpresa()">Salvar</button> <button onclick="fecharCadastroEmpresas()" style="background:#777">Fechar</button><p class="small">Após salvar, ao preencher o CNPJ no formulário principal, os dados serão carregados automaticamente.</p></div></div>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbyEcifHlp3y6VCMbp68PzRZi3dNt-Y1gtvdTJjJ5WLPwVWcvUaLE9ue_Xa0uBoIN_SKBw/exec';
@@ -283,6 +283,7 @@ async function fazerLogin(){
     usuarioLogado = r.usuario;
 
     localStorage.setItem('usuario_gestao_email', email);
+    localStorage.setItem('usuario_somesso_email', email);
 
     localStorage.setItem(
       'usuario_gestao',
@@ -349,17 +350,10 @@ async function carregarDados(){
     render(); msgSistema.textContent='Dados atualizados.';
   }catch(e){msgSistema.textContent='Erro ao carregar dados: '+e.message}
 }
-function normalizarGestao(x){return {id:x.ID||x.id||'',responsavelSomesso:x['Responsável Somesso']||x.responsavelSomesso||'',cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||'',responsavelEmpresa:x['Responsável Empresa']||x.responsavelEmpresa||'',palestras:x.Palestras||x.palestras||'',s2210:x['S-2210']||x.s2210||'',s2220:x['S-2220']||x.s2220||'',s2240:x['S-2240']||x.s2240||'',aso:x.ASO||x.aso||'',renovacao:x['Renovação']||x.renovacao||''}}
-function normalizarEmpresa(x){
-  return {
-    cnpj:x.CNPJ||x.cnpj||'',
-    empresa:x.Empresa||x.empresa||'',
-    contato:x.Contato||x.contato||'',
-    email:x.Email||x['E-mail']||x.email||'',
-    telefone:x.Telefone||x.telefone||'',
-    responsavelEmpresa:x['Responsável pela Empresa']||x['Responsável Empresa']||x.responsavelEmpresa||''
-  }
+function normalizarGestao(x){
+  return {id:x.ID||x.id||'',responsavelSomesso:x['Responsável Somesso']||x.responsavelSomesso||'',cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',contato:x.Contato||x.contato||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||'',palestras:x.Palestras||x.palestras||'',s2210:x['S-2210']||x.s2210||'',s2220:x['S-2220']||x.s2220||'',s2240:x['S-2240']||x.s2240||'',aso:x.ASO||x.aso||'',renovacao:x['Renovação']||x.renovacao||''}
 }
+function normalizarEmpresa(x){return {cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',contato:x.Contato||x.contato||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||''}}
 function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function limparCNPJ(v){return String(v||'').replace(/\D/g,'')}
 function itensVisiveis(){
@@ -405,7 +399,7 @@ function render(){
     if(String(item.palestras).toLowerCase()==='sim') palestrasSim++;
     if(String(item.renovacao).toLowerCase()==='sim') renovacaoSim++;
 
-    tb.innerHTML += `<tr><td>${esc(item.responsavelSomesso)}</td><td>${esc(item.cnpj)}</td><td>${esc(item.empresa)}</td><td>${esc(item.email)}</td><td>${esc(item.telefone)}</td><td>${esc(item.responsavelEmpresa)}</td><td>${esc(item.palestras)}</td><td>${esc(item.s2210)}</td><td>${esc(item.s2220)}</td><td>${esc(item.s2240)}</td><td>${esc(item.aso)}</td><td>${esc(item.renovacao)}</td><td class="acoes"><button onclick="editarPorId('${item.id}')">Editar</button><button class="excluir" onclick="excluirItem('${item.id}')">Excluir</button></td></tr>`;
+    tb.innerHTML += `<tr><td>${esc(item.responsavelSomesso)}</td><td>${esc(item.cnpj)}</td><td>${esc(item.empresa)}</td><td>${esc(item.email)}</td><td>${esc(item.telefone)}</td><td>${esc(item.contato)}</td><td>${esc(item.palestras)}</td><td>${esc(item.s2210)}</td><td>${esc(item.s2220)}</td><td>${esc(item.s2240)}</td><td>${esc(item.aso)}</td><td>${esc(item.renovacao)}</td><td class="acoes"><button onclick="editarPorId('${item.id}')">Editar</button><button class="excluir" onclick="excluirItem('${item.id}')">Excluir</button></td></tr>`;
   });
 
   ct.innerText=visiveis.length;
@@ -413,7 +407,7 @@ function render(){
   cr.innerText=renovacaoSim;
 }
 function limparCampos(){
-  ['responsavelSomesso','cnpj','empresa','email','telefone','responsavelEmpresa','palestras','s2210','s2220','s2240','aso','renovacao']
+  ['responsavelSomesso','cnpj','empresa','email','telefone','contato','palestras','s2210','s2220','s2240','aso','renovacao']
     .forEach(id=>document.getElementById(id).value='');
 
   aplicarPermissoesUsuario();
@@ -430,7 +424,7 @@ async function adicionar(){
     empresa:empresa.value.trim(),
     email:email.value.trim(),
     telefone:telefone.value.trim(),
-    responsavelEmpresa:responsavelEmpresa.value.trim(),
+    contato:contato.value.trim(),
     palestras:palestras.value,
     s2210:s2210.value,
     s2220:s2220.value,
@@ -545,26 +539,30 @@ filtro.addEventListener('keyup', render);
 function exportarExcel(){let dados=itensVisiveis().map(item=>({'Responsável Somesso':item.responsavelSomesso,'CNPJ':item.cnpj,'Empresa':item.empresa,'E-mail':item.email,'Telefone':item.telefone,'Responsável Empresa':item.responsavelEmpresa,'Palestras':item.palestras,'S-2210':item.s2210,'S-2220':item.s2220,'S-2240':item.s2240,'ASO':item.aso,'Renovação':item.renovacao}));let ws=XLSX.utils.json_to_sheet(dados);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gestão');XLSX.writeFile(wb,'acompanhamento_empresas.xlsx')}
 function gerarPDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF('landscape');doc.text('Acompanhamento Empresas Gestão',14,15);let rows=itensVisiveis().map(item=>[item.responsavelSomesso,item.cnpj,item.empresa,item.email,item.telefone,item.responsavelEmpresa,item.palestras,item.s2210,item.s2220,item.s2240,item.aso,item.renovacao]);doc.autoTable({startY:25,head:[['Responsável','CNPJ','Empresa','Email','Telefone','Resp. Empresa','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],body:rows,styles:{fontSize:7}});doc.save('acompanhamento_empresas.pdf')}
 window.addEventListener('load', async () => {
-  const usuarioSalvo = localStorage.getItem('usuario_gestao');
+  const email = localStorage.getItem('usuario_gestao_email') || localStorage.getItem('usuario_somesso_email') || '';
 
-  if (usuarioSalvo) {
-    usuarioLogado = JSON.parse(usuarioSalvo);
-
-    loginBox.style.display = 'none';
-    appBox.style.display = 'block';
-
-    usuarioInfo.textContent =
-      `${usuarioLogado.nome} - ${usuarioLogado.perfil}`;
-
-    aplicarPermissoesUsuario();
-    await carregarDados();
-    return;
-  }
-
-  const email = localStorage.getItem('usuario_gestao_email') || '';
-
-  if (email) {
+  if(email){
     emailLogin.value = email;
+    try{
+      const r = await api('login', {email});
+      if(r.ok){
+        usuarioLogado = r.usuario;
+        localStorage.setItem('usuario_gestao', JSON.stringify(r.usuario));
+        localStorage.setItem('usuario_gestao_email', email);
+        localStorage.setItem('usuario_somesso', JSON.stringify(r.usuario));
+        localStorage.setItem('usuario_somesso_email', email);
+
+        loginBox.style.display = 'none';
+        appBox.style.display = 'block';
+
+        usuarioInfo.textContent = `${usuarioLogado.nome} - ${usuarioLogado.perfil}`;
+        aplicarPermissoesUsuario();
+        await carregarDados();
+        return;
+      }
+    }catch(e){
+      console.warn('Não foi possível restaurar login automaticamente:', e.message);
+    }
   }
 });
 </script>
