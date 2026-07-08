@@ -214,7 +214,7 @@ a:hover{
 <div class="barra"><div><b>Usuário:</b> <span id="usuarioInfo"></span></div><div><button onclick="carregarDados()">Atualizar</button> <button onclick="sair()">Sair</button></div></div>
 <div class="box">
 <h2>ACOMPANHAMENTO EMPRESAS GESTÃO</h2>
-<button type="button" onclick="abrirCadastroEmpresas()">Cadastro de Empresas</button><br><br>
+
 <div class="grid">
 <select id="responsavelSomesso">
 <option value="">Selecione o responsável Somesso</option>
@@ -247,12 +247,9 @@ a:hover{
 <table id="tab"><thead><tr><th>Responsável Somesso</th><th>CNPJ</th><th>Empresa</th><th>E-mail</th><th>Telefone</th><th>Contato</th><th>Palestras</th><th>S-2210</th><th>S-2220</th><th>S-2240</th><th>ASO</th><th>Renovação</th><th>Ações</th></tr></thead><tbody id="tb"></tbody></table>
 </div>
 </div>
-
-<div id="modalEmpresas" class="modal"><div class="modal-content"><h3>Cadastro de Empresas</h3><div class="grid"><input id="cadCnpj" placeholder="CNPJ"><input id="cadEmpresa" placeholder="Empresa"><input id="cadContato" placeholder="Contato"><input id="cadTelefone" placeholder="Telefone"><input id="cadEmail" placeholder="E-mail"></div><br><button onclick="salvarCadastroEmpresa()">Salvar</button> <button onclick="fecharCadastroEmpresas()" style="background:#777">Fechar</button><p class="small">Após salvar, ao preencher o CNPJ no formulário principal, os dados serão carregados automaticamente.</p></div></div>
-
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbyEcifHlp3y6VCMbp68PzRZi3dNt-Y1gtvdTJjJ5WLPwVWcvUaLE9ue_Xa0uBoIN_SKBw/exec';
-const PCMSO_API_URL = 'https://script.google.com/macros/s/AKfycbwFK_2-4Ni6HcIDxh6rnYMOAjAiDds23DOPzi4prqdY4FCDCb4692MGfQTLuLNSq4lVVQ/exec';
+const PORTAL_API_URL = 'https://script.google.com/macros/s/AKfycbyMSNie2VlxV25H-3MpvENoBZO6IdF1QByYSpWOl5yd0vAAKQhyXiMuJaqNo42Kc_nX/exec';
 let itens = [];
 let empresas = [];
 let editandoId = null;
@@ -262,67 +259,6 @@ async function api(acao, dados={}){
   const resp = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({acao, ...dados})});
   const txt = await resp.text();
   try{return JSON.parse(txt)}catch(e){console.error(txt);throw new Error('Resposta inválida da API')}
-}
-
-async function apiPCMSO(acao, dados={}){
-  const resp = await fetch(PCMSO_API_URL, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({acao, ...dados})
-  });
-  const txt = await resp.text();
-  try{return JSON.parse(txt)}catch(e){console.error(txt);throw new Error('Resposta inválida da API PCMSO')}
-}
-
-function usuarioPortalSalvo(){
-  try{
-    return JSON.parse(
-      localStorage.getItem('portal_usuario') ||
-      localStorage.getItem('usuario_somesso') ||
-      localStorage.getItem('usuario_gestao') ||
-      'null'
-    );
-  }catch(e){return null}
-}
-
-function emailPortalSalvo(){
-  const params = new URLSearchParams(window.location.search);
-  const emailUrl = params.get('email') || params.get('usuario') || '';
-  if(emailUrl) return emailUrl.trim().toLowerCase();
-
-  const usuario = usuarioPortalSalvo();
-  return String(
-    localStorage.getItem('portal_usuario_email') ||
-    localStorage.getItem('usuario_somesso_email') ||
-    localStorage.getItem('usuario_gestao_email') ||
-    usuario?.email ||
-    ''
-  ).trim().toLowerCase();
-}
-
-async function abrirComUsuarioPortal(){
-  const salvo = usuarioPortalSalvo();
-  const email = emailPortalSalvo();
-
-  if(!salvo && !email) return false;
-
-  usuarioLogado = salvo || {email:email, nome:email, perfil:'USUARIO'};
-
-  if(email){
-    localStorage.setItem('portal_usuario_email', email);
-    localStorage.setItem('usuario_somesso_email', email);
-    localStorage.setItem('usuario_gestao_email', email);
-  }
-
-  localStorage.setItem('usuario_gestao', JSON.stringify(usuarioLogado));
-  localStorage.setItem('usuario_somesso', JSON.stringify(usuarioLogado));
-
-  loginBox.style.display='none';
-  appBox.style.display='block';
-  usuarioInfo.textContent = `${usuarioLogado.nome || usuarioLogado.email || ''} - ${usuarioLogado.perfil || ''}`;
-  aplicarPermissoesUsuario();
-  await carregarDados();
-  return true;
 }
 async function fazerLogin(){
   const email = emailLogin.value.trim().toLowerCase();
@@ -344,7 +280,6 @@ async function fazerLogin(){
 
     usuarioLogado = r.usuario;
 
-    localStorage.setItem('portal_usuario_email', email);
     localStorage.setItem('usuario_gestao_email', email);
     localStorage.setItem('usuario_somesso_email', email);
 
@@ -352,8 +287,6 @@ async function fazerLogin(){
       'usuario_gestao',
       JSON.stringify(r.usuario)
     );
-    localStorage.setItem('portal_usuario', JSON.stringify(r.usuario));
-    localStorage.setItem('usuario_somesso', JSON.stringify(r.usuario));
 
     loginBox.style.display='none';
     appBox.style.display='block';
@@ -369,10 +302,7 @@ async function fazerLogin(){
       'Erro ao conectar com a API: ' + e.message;
   }
 }
-function sair(){
-  ['portal_usuario','portal_usuario_email','usuario_somesso','usuario_somesso_email','usuario_gestao','usuario_gestao_email'].forEach(k=>localStorage.removeItem(k));
-  location.reload();
-}
+function sair(){['portal_usuario','portal_usuario_email','somesso_usuario','somesso_usuario_email','usuario_pcmso','usuario_pcmso_email','usuario_gestao','usuario_gestao_email','usuario_relatorio','usuario_relatorio_email','usuario_metas','usuario_metas_email'].forEach(k=>localStorage.removeItem(k));location.reload();}
 
 function responsavelUsuario(){
   return usuarioLogado
@@ -404,23 +334,26 @@ function aplicarPermissoesUsuario(){
   }
 }
 
+
+async function apiPortal(acao,dados={}){
+  const resp = await fetch(PORTAL_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({acao,...dados})});
+  const txt = await resp.text();
+  try{return JSON.parse(txt)}catch(e){return {ok:false,empresas:[]}}
+}
+async function carregarEmpresasDoPortal(){
+  try{
+    const r = await apiPortal('listarEmpresas');
+    if(r && (r.empresas || r.Empresas)) return r.empresas || r.Empresas || [];
+  }catch(e){}
+  try{return JSON.parse(localStorage.getItem('portal_empresas') || '[]')}catch(e){return []}
+}
+
 async function carregarDados(){
   msgSistema.textContent='Carregando dados...';
   try{
     const r = await api('listar');
     itens = (r.gestao || []).map(normalizarGestao);
-
-    let empresasGestao = (r.empresas || []).map(normalizarEmpresa);
-    let empresasPCMSO = [];
-
-    try{
-      const rp = await apiPCMSO('listar');
-      empresasPCMSO = (rp.empresas || []).map(normalizarEmpresa);
-    }catch(e){
-      console.warn('Não foi possível carregar empresas do PCMSO:', e.message);
-    }
-
-    empresas = mesclarEmpresas(empresasGestao, empresasPCMSO);
+    empresas = [...(r.empresas || []), ...(await carregarEmpresasDoPortal())].map(normalizarEmpresa);
     aplicarPermissoesUsuario();
     render(); msgSistema.textContent='Dados atualizados.';
   }catch(e){msgSistema.textContent='Erro ao carregar dados: '+e.message}
@@ -428,28 +361,7 @@ async function carregarDados(){
 function normalizarGestao(x){
   return {id:x.ID||x.id||'',responsavelSomesso:x['Responsável Somesso']||x.responsavelSomesso||'',cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',contato:x.Contato||x.contato||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||'',palestras:x.Palestras||x.palestras||'',s2210:x['S-2210']||x.s2210||'',s2220:x['S-2220']||x.s2220||'',s2240:x['S-2240']||x.s2240||'',aso:x.ASO||x.aso||'',renovacao:x['Renovação']||x.renovacao||''}
 }
-function normalizarEmpresa(x){return {
-  cnpj:limparCNPJ(x.CNPJ||x.cnpj||''),
-  empresa:x.Empresa||x.empresa||'',
-  contato:x.Contato||x.contato||'',
-  email:x.Email||x['E-mail']||x.email||'',
-  telefone:x.Telefone||x.telefone||''
-}}
-function mesclarEmpresas(empresasGestao=[], empresasPCMSO=[]){
-  const mapa = {};
-  [...empresasPCMSO, ...empresasGestao].forEach(e=>{
-    const c = limparCNPJ(e.cnpj);
-    if(!c) return;
-    mapa[c] = {
-      cnpj:c,
-      empresa:e.empresa || mapa[c]?.empresa || '',
-      contato:e.contato || mapa[c]?.contato || '',
-      email:e.email || mapa[c]?.email || '',
-      telefone:e.telefone || mapa[c]?.telefone || ''
-    };
-  });
-  return Object.values(mapa);
-}
+function normalizarEmpresa(x){return {cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',contato:x.Contato||x.contato||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||''}}
 function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function limparCNPJ(v){return String(v||'').replace(/\D/g,'')}
 function itensVisiveis(){
@@ -583,7 +495,6 @@ function editarPorId(id){
   empresa.value=item.empresa;
   email.value=item.email;
   telefone.value=item.telefone;
-  responsavelEmpresa.value=item.responsavelEmpresa;
   palestras.value=item.palestras;
   s2210.value=item.s2210;
   s2220.value=item.s2220;
@@ -629,54 +540,31 @@ async function excluirItem(id){
   }
 }
 function abrirCadastroEmpresas(){modalEmpresas.style.display='block'} function fecharCadastroEmpresas(){modalEmpresas.style.display='none'}
-async function salvarCadastroEmpresa(){
-  let obj={
-    cnpj:limparCNPJ(cadCnpj.value),
-    empresa:cadEmpresa.value.trim(),
-    contato:cadContato.value.trim(),
-    email:cadEmail.value.trim(),
-    telefone:cadTelefone.value.trim()
-  };
-  if(obj.cnpj.length!==14){alert('CNPJ inválido');return}
-  for(let k in obj){if(!obj[k]){alert('Preencha todos os campos da empresa.');return}}
-  try{
-    let r=await api('salvarEmpresa',obj);
-    if(!r.ok){alert(r.erro||'Erro ao salvar empresa.');return}
-
-    try{
-      await apiPCMSO('salvarEmpresa',obj);
-    }catch(e){
-      console.warn('Empresa salva na Gestão, mas não foi possível sincronizar com PCMSO:', e.message);
-    }
-
-    fecharCadastroEmpresas();
-    cadCnpj.value=cadEmpresa.value=cadContato.value=cadEmail.value=cadTelefone.value='';
-    await carregarDados();
-    alert('Empresa cadastrada com sucesso!')
-  }catch(e){alert('Erro ao salvar empresa: '+e.message)}
-}
-function preencherEmpresaPorCNPJGestao(){
-  let c=limparCNPJ(cnpj.value);
-  let emp=empresas.find(e=>limparCNPJ(e.cnpj)===c);
-  if(emp){
-    empresa.value=emp.empresa || '';
-    email.value=emp.email || '';
-    telefone.value=emp.telefone || '';
-    contato.value=emp.contato || '';
-  }
-}
-cnpj.addEventListener('input',preencherEmpresaPorCNPJGestao);
-cnpj.addEventListener('change',preencherEmpresaPorCNPJGestao);
-cnpj.addEventListener('blur',preencherEmpresaPorCNPJGestao);
+async function salvarCadastroEmpresa(){let obj={cnpj:limparCNPJ(cadCnpj.value),empresa:cadEmpresa.value.trim(),email:cadEmail.value.trim(),telefone:cadTelefone.value.trim(),responsavelEmpresa:cadResponsavel.value.trim()}; if(obj.cnpj.length!==14){alert('CNPJ inválido');return} for(let k in obj){if(!obj[k]){alert('Preencha todos os campos da empresa.');return}} try{let r=await api('salvarEmpresa',obj); if(!r.ok){alert(r.erro||'Erro ao salvar empresa.');return} fecharCadastroEmpresas(); cadCnpj.value=cadEmpresa.value=cadEmail.value=cadTelefone.value=cadResponsavel.value=''; await carregarDados(); alert('Empresa cadastrada com sucesso!')}catch(e){alert('Erro ao salvar empresa: '+e.message)}}
+function preencherEmpresaPorCNPJ(){let c=limparCNPJ(cnpj.value); let emp=empresas.find(e=>limparCNPJ(e.cnpj)===c); if(emp){empresa.value=emp.empresa||''; email.value=emp.email||''; telefone.value=emp.telefone||''; contato.value=emp.contato||'';}}
+cnpj.addEventListener('input',preencherEmpresaPorCNPJ);
+cnpj.addEventListener('change',preencherEmpresaPorCNPJ);
+cnpj.addEventListener('blur',preencherEmpresaPorCNPJ);
 filtro.addEventListener('keyup', render);
-function exportarExcel(){let dados=itensVisiveis().map(item=>({'Responsável Somesso':item.responsavelSomesso,'CNPJ':item.cnpj,'Empresa':item.empresa,'E-mail':item.email,'Telefone':item.telefone,'Responsável Empresa':item.responsavelEmpresa,'Palestras':item.palestras,'S-2210':item.s2210,'S-2220':item.s2220,'S-2240':item.s2240,'ASO':item.aso,'Renovação':item.renovacao}));let ws=XLSX.utils.json_to_sheet(dados);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gestão');XLSX.writeFile(wb,'acompanhamento_empresas.xlsx')}
-function gerarPDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF('landscape');doc.text('Acompanhamento Empresas Gestão',14,15);let rows=itensVisiveis().map(item=>[item.responsavelSomesso,item.cnpj,item.empresa,item.email,item.telefone,item.responsavelEmpresa,item.palestras,item.s2210,item.s2220,item.s2240,item.aso,item.renovacao]);doc.autoTable({startY:25,head:[['Responsável','CNPJ','Empresa','Email','Telefone','Resp. Empresa','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],body:rows,styles:{fontSize:7}});doc.save('acompanhamento_empresas.pdf')}
+function exportarExcel(){let dados=itensVisiveis().map(item=>({'Responsável Somesso':item.responsavelSomesso,'CNPJ':item.cnpj,'Empresa':item.empresa,'E-mail':item.email,'Telefone':item.telefone,'Contato':item.contato,'Palestras':item.palestras,'S-2210':item.s2210,'S-2220':item.s2220,'S-2240':item.s2240,'ASO':item.aso,'Renovação':item.renovacao}));let ws=XLSX.utils.json_to_sheet(dados);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gestão');XLSX.writeFile(wb,'acompanhamento_empresas.xlsx')}
+function gerarPDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF('landscape');doc.text('Acompanhamento Empresas Gestão',14,15);let rows=itensVisiveis().map(item=>[item.responsavelSomesso,item.cnpj,item.empresa,item.email,item.telefone,item.contato,item.palestras,item.s2210,item.s2220,item.s2240,item.aso,item.renovacao]);doc.autoTable({startY:25,head:[['Responsável','CNPJ','Empresa','Email','Telefone','Contato','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],body:rows,styles:{fontSize:7}});doc.save('acompanhamento_empresas.pdf')}
 window.addEventListener('load', async () => {
-  const abriu = await abrirComUsuarioPortal();
-  if(!abriu){
-    const email = emailPortalSalvo();
-    if(email) emailLogin.value = email;
+  const params = new URLSearchParams(window.location.search);
+  const email = params.get('email') || params.get('usuario') || localStorage.getItem('portal_usuario_email') || localStorage.getItem('usuario_gestao_email') || localStorage.getItem('usuario_somesso_email') || '';
+  const usuarioPortal = localStorage.getItem('portal_usuario') || localStorage.getItem('usuario_gestao') || localStorage.getItem('usuario_somesso');
+  if(usuarioPortal){
+    try{usuarioLogado = JSON.parse(usuarioPortal);}catch(e){}
   }
+  if(usuarioLogado){
+    if(email){localStorage.setItem('usuario_gestao_email', email); localStorage.setItem('usuario_somesso_email', email); localStorage.setItem('portal_usuario_email', email);}
+    localStorage.setItem('usuario_gestao', JSON.stringify(usuarioLogado));
+    localStorage.setItem('usuario_somesso', JSON.stringify(usuarioLogado));
+    localStorage.setItem('portal_usuario', JSON.stringify(usuarioLogado));
+    loginBox.style.display='none'; appBox.style.display='block';
+    usuarioInfo.textContent = `${usuarioLogado.nome} - ${usuarioLogado.perfil}`;
+    aplicarPermissoesUsuario(); await carregarDados(); return;
+  }
+  if(email){ emailLogin.value = email; }
 });
 </script>
 </body>
