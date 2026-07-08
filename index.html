@@ -249,7 +249,7 @@ a:hover{
 </div>
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbyEcifHlp3y6VCMbp68PzRZi3dNt-Y1gtvdTJjJ5WLPwVWcvUaLE9ue_Xa0uBoIN_SKBw/exec';
-const PORTAL_API_URL = 'https://script.google.com/macros/s/AKfycbyMSNie2VlxV25H-3MpvENoBZO6IdF1QByYSpWOl5yd0vAAKQhyXiMuJaqNo42Kc_nX/exec';
+const PORTAL_API_URL = 'https://script.google.com/macros/s/AKfycbwCWj9Mm8h2zvZeHdp7FkwgJZDA0pfGyhbeboiH_kMMO5GFUQoC8gNBEpfiHy_zxudAzw/exec';
 let itens = [];
 let empresas = [];
 let editandoId = null;
@@ -539,8 +539,9 @@ async function excluirItem(id){
     alert('Erro ao excluir: '+e.message)
   }
 }
-function abrirCadastroEmpresas(){modalEmpresas.style.display='block'} function fecharCadastroEmpresas(){modalEmpresas.style.display='none'}
-async function salvarCadastroEmpresa(){let obj={cnpj:limparCNPJ(cadCnpj.value),empresa:cadEmpresa.value.trim(),email:cadEmail.value.trim(),telefone:cadTelefone.value.trim(),responsavelEmpresa:cadResponsavel.value.trim()}; if(obj.cnpj.length!==14){alert('CNPJ inválido');return} for(let k in obj){if(!obj[k]){alert('Preencha todos os campos da empresa.');return}} try{let r=await api('salvarEmpresa',obj); if(!r.ok){alert(r.erro||'Erro ao salvar empresa.');return} fecharCadastroEmpresas(); cadCnpj.value=cadEmpresa.value=cadEmail.value=cadTelefone.value=cadResponsavel.value=''; await carregarDados(); alert('Empresa cadastrada com sucesso!')}catch(e){alert('Erro ao salvar empresa: '+e.message)}}
+function abrirCadastroEmpresas(){alert('O cadastro de empresas agora fica no Portal.')}
+function fecharCadastroEmpresas(){}
+async function salvarCadastroEmpresa(){alert('O cadastro de empresas agora fica no Portal.')}
 function preencherEmpresaPorCNPJ(){let c=limparCNPJ(cnpj.value); let emp=empresas.find(e=>limparCNPJ(e.cnpj)===c); if(emp){empresa.value=emp.empresa||''; email.value=emp.email||''; telefone.value=emp.telefone||''; contato.value=emp.contato||'';}}
 cnpj.addEventListener('input',preencherEmpresaPorCNPJ);
 cnpj.addEventListener('change',preencherEmpresaPorCNPJ);
