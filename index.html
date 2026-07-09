@@ -312,8 +312,9 @@ function sair(){
 }
 
 async function apiPortal(dados){
-  const resp = await fetch(PORTAL_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(dados)});
-  return await resp.json();
+  const resp = await fetch(PORTAL_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(dados),cache:'no-store'});
+  const txt = await resp.text();
+  try{return JSON.parse(txt)}catch(e){console.error('Resposta inválida da API central:', txt);throw new Error('Resposta inválida da API central')}
 }
 
 function obterUsuarioPortal(){
@@ -409,7 +410,15 @@ async function carregarEmpresasPortalCentral(){
 function normalizarGestao(x){
   return {id:x.ID||x.id||'',responsavelSomesso:x['Responsável Somesso']||x.responsavelSomesso||'',cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',contato:x.Contato||x.contato||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||'',palestras:x.Palestras||x.palestras||'',s2210:x['S-2210']||x.s2210||'',s2220:x['S-2220']||x.s2220||'',s2240:x['S-2240']||x.s2240||'',aso:x.ASO||x.aso||'',renovacao:x['Renovação']||x.renovacao||''}
 }
-function normalizarEmpresa(x){return {cnpj:x.CNPJ||x.cnpj||'',empresa:x.Empresa||x.empresa||'',contato:x.Contato||x.contato||'',email:x.Email||x['E-mail']||x.email||'',telefone:x.Telefone||x.telefone||''}}
+function normalizarEmpresa(x){
+  return {
+    cnpj: x.CNPJ || x.cnpj || x.Cnpj || '',
+    empresa: x.Empresa || x.empresa || x.EMPRESA || x.Nome || x.nome || x['Razão Social'] || x.razaoSocial || '',
+    contato: x.Contato || x.contato || x.CONTATO || '',
+    email: x.Email || x['E-mail'] || x.email || x.EMAIL || x['E-MAIL'] || '',
+    telefone: x.Telefone || x.telefone || x.TELEFONE || x.Celular || x.celular || ''
+  }
+}
 function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function limparCNPJ(v){return String(v||'').replace(/\D/g,'')}
 function itensVisiveis(){
@@ -598,27 +607,63 @@ function aplicarEmpresaNoFormulario(emp){
   return true;
 }
 
+async function buscarEmpresaCentralPorCNPJ(cnpjDigitado){
+  const c = limparCNPJ(cnpjDigitado);
+  if(c.length !== 14) return null;
+
+  // Primeiro tenta na memória.
+  let emp = empresas.find(e => limparCNPJ(e.cnpj || e.CNPJ) === c);
+  if(emp) return emp;
+
+  // Depois consulta diretamente a base central do Portal, sem depender do carregamento inicial.
+  const r = await apiPortal({acao:'listarEmpresas'});
+  const lista = (r.empresas || []).map(normalizarEmpresa).filter(e => limparCNPJ(e.cnpj));
+
+  const mapa = {};
+  empresas.forEach(e => {
+    const key = limparCNPJ(e.cnpj || e.CNPJ);
+    if(key) mapa[key] = normalizarEmpresa(e);
+  });
+  lista.forEach(e => {
+    const key = limparCNPJ(e.cnpj || e.CNPJ);
+    if(key) mapa[key] = {...(mapa[key] || {}), ...e, cnpj:key};
+  });
+  empresas = Object.values(mapa);
+
+  return empresas.find(e => limparCNPJ(e.cnpj || e.CNPJ) === c) || null;
+}
+
+let timerBuscaCNPJ = null;
 async function preencherEmpresaPorCNPJ(){
   const c = limparCNPJ(cnpj.value);
-  if(cnpj.value) cnpj.value = c;
+  cnpj.value = c;
+
   if(c.length < 14) return;
 
-  let emp = empresas.find(e => limparCNPJ(e.cnpj) === c);
+  try{
+    if(msgSistema) msgSistema.textContent = 'Buscando empresa na base central...';
+    const emp = await buscarEmpresaCentralPorCNPJ(c);
 
-  // Se ainda não encontrou, busca novamente na base central do Portal no momento da digitação.
-  if(!emp){
-    await carregarEmpresasPortalCentral();
-    emp = empresas.find(e => limparCNPJ(e.cnpj) === c);
-  }
-
-  if(emp){
-    aplicarEmpresaNoFormulario(emp);
+    if(emp){
+      aplicarEmpresaNoFormulario(emp);
+      if(msgSistema) msgSistema.textContent = 'Empresa encontrada na base central.';
+    }else{
+      if(msgSistema) msgSistema.textContent = 'CNPJ não encontrado na base central de empresas.';
+    }
+  }catch(e){
+    console.error('Erro ao buscar empresa central:', e);
+    if(msgSistema) msgSistema.textContent = 'Erro ao consultar base central de empresas: ' + e.message;
   }
 }
 
-cnpj.addEventListener('input', () => preencherEmpresaPorCNPJ());
-cnpj.addEventListener('change', () => preencherEmpresaPorCNPJ());
-cnpj.addEventListener('blur', () => preencherEmpresaPorCNPJ());
+function agendarBuscaEmpresaPorCNPJ(){
+  clearTimeout(timerBuscaCNPJ);
+  timerBuscaCNPJ = setTimeout(preencherEmpresaPorCNPJ, 300);
+}
+
+cnpj.addEventListener('input', agendarBuscaEmpresaPorCNPJ);
+cnpj.addEventListener('change', preencherEmpresaPorCNPJ);
+cnpj.addEventListener('blur', preencherEmpresaPorCNPJ);
 filtro.addEventListener('keyup', render);
 function exportarExcel(){let dados=itensVisiveis().map(item=>({'Responsável Somesso':item.responsavelSomesso,'CNPJ':item.cnpj,'Empresa':item.empresa,'E-mail':item.email,'Telefone':item.telefone,'Palestras':item.palestras,'S-2210':item.s2210,'S-2220':item.s2220,'S-2240':item.s2240,'ASO':item.aso,'Renovação':item.renovacao}));let ws=XLSX.utils.json_to_sheet(dados);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gestão');XLSX.writeFile(wb,'acompanhamento_empresas.xlsx')}
 function gerarPDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF('landscape');doc.text('Acompanhamento Empresas Gestão',14,15);let rows=itensVisiveis().map(item=>[item.responsavelSomesso,item.cnpj,item.empresa,item.email,item.telefone,item.palestras,item.s2210,item.s2220,item.s2240,item.aso,item.renovacao]);doc.autoTable({startY:25,head:[['Responsável','CNPJ','Empresa','Email','Telefone','Resp. Empresa','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],body:rows,styles:{fontSize:7}});doc.save('acompanhamento_empresas.pdf')}
