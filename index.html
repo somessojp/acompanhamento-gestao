@@ -385,12 +385,21 @@ async function carregarDados(){
 async function carregarEmpresasPortalCentral(){
   try{
     const r = await apiPortal({acao:'listarEmpresas'});
-    const lista = (r.empresas || []).map(normalizarEmpresa);
+    const lista = (r.empresas || []).map(normalizarEmpresa).filter(e => limparCNPJ(e.cnpj));
     const mapa = {};
-    [...empresas, ...lista].forEach(e => {
+
+    // Primeiro carrega eventuais empresas da própria Gestão.
+    empresas.forEach(e => {
+      const c = limparCNPJ(e.cnpj);
+      if(c) mapa[c] = {...e, cnpj:c};
+    });
+
+    // Depois sobrepõe com a base central do Portal, que é a fonte principal.
+    lista.forEach(e => {
       const c = limparCNPJ(e.cnpj);
       if(c) mapa[c] = {...(mapa[c] || {}), ...e, cnpj:c};
     });
+
     empresas = Object.values(mapa);
   }catch(e){
     console.warn('Não foi possível carregar empresas do Portal:', e.message);
@@ -580,10 +589,36 @@ async function excluirItem(id){
 }
 function abrirCadastroEmpresas(){modalEmpresas.style.display='block'} function fecharCadastroEmpresas(){modalEmpresas.style.display='none'}
 async function salvarCadastroEmpresa(){let obj={cnpj:limparCNPJ(cadCnpj.value),empresa:cadEmpresa.value.trim(),email:cadEmail.value.trim(),telefone:cadTelefone.value.trim(),responsavelEmpresa:''}; if(obj.cnpj.length!==14){alert('CNPJ inválido');return} for(let k in obj){if(!obj[k]){alert('Preencha todos os campos da empresa.');return}} try{let r=await api('salvarEmpresa',obj); if(!r.ok){alert(r.erro||'Erro ao salvar empresa.');return} fecharCadastroEmpresas(); cadCnpj.value=cadEmpresa.value=cadEmail.value=cadTelefone.value=''; await carregarDados(); alert('Empresa cadastrada com sucesso!')}catch(e){alert('Erro ao salvar empresa: '+e.message)}}
-function preencherEmpresaPorCNPJ(){let c=limparCNPJ(cnpj.value); let emp=empresas.find(e=>limparCNPJ(e.cnpj)===c); if(emp){empresa.value=emp.empresa||''; email.value=emp.email||''; telefone.value=emp.telefone||''; contato.value=emp.contato||'';}};
-cnpj.addEventListener('input',preencherEmpresaPorCNPJ);
-cnpj.addEventListener('change',preencherEmpresaPorCNPJ);
-cnpj.addEventListener('blur',preencherEmpresaPorCNPJ);
+function aplicarEmpresaNoFormulario(emp){
+  if(!emp) return false;
+  empresa.value = emp.empresa || emp.Empresa || '';
+  email.value = emp.email || emp.Email || emp['E-mail'] || '';
+  telefone.value = emp.telefone || emp.Telefone || '';
+  contato.value = emp.contato || emp.Contato || '';
+  return true;
+}
+
+async function preencherEmpresaPorCNPJ(){
+  const c = limparCNPJ(cnpj.value);
+  if(cnpj.value) cnpj.value = c;
+  if(c.length < 14) return;
+
+  let emp = empresas.find(e => limparCNPJ(e.cnpj) === c);
+
+  // Se ainda não encontrou, busca novamente na base central do Portal no momento da digitação.
+  if(!emp){
+    await carregarEmpresasPortalCentral();
+    emp = empresas.find(e => limparCNPJ(e.cnpj) === c);
+  }
+
+  if(emp){
+    aplicarEmpresaNoFormulario(emp);
+  }
+}
+
+cnpj.addEventListener('input', () => preencherEmpresaPorCNPJ());
+cnpj.addEventListener('change', () => preencherEmpresaPorCNPJ());
+cnpj.addEventListener('blur', () => preencherEmpresaPorCNPJ());
 filtro.addEventListener('keyup', render);
 function exportarExcel(){let dados=itensVisiveis().map(item=>({'Responsável Somesso':item.responsavelSomesso,'CNPJ':item.cnpj,'Empresa':item.empresa,'E-mail':item.email,'Telefone':item.telefone,'Palestras':item.palestras,'S-2210':item.s2210,'S-2220':item.s2220,'S-2240':item.s2240,'ASO':item.aso,'Renovação':item.renovacao}));let ws=XLSX.utils.json_to_sheet(dados);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gestão');XLSX.writeFile(wb,'acompanhamento_empresas.xlsx')}
 function gerarPDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF('landscape');doc.text('Acompanhamento Empresas Gestão',14,15);let rows=itensVisiveis().map(item=>[item.responsavelSomesso,item.cnpj,item.empresa,item.email,item.telefone,item.palestras,item.s2210,item.s2220,item.s2240,item.aso,item.renovacao]);doc.autoTable({startY:25,head:[['Responsável','CNPJ','Empresa','Email','Telefone','Resp. Empresa','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],body:rows,styles:{fontSize:7}});doc.save('acompanhamento_empresas.pdf')}
