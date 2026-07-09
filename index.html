@@ -221,7 +221,7 @@ a:hover{
 <option value="Tassio Borges">Tassio Borges</option>
 <option value="Tamilla Pereira">Tamilla Pereira</option>
 </select>
-<input id="cnpj" placeholder="CNPJ" maxlength="14" autocomplete="off">
+<input id="cnpj" type="text" placeholder="CNPJ" maxlength="18" autocomplete="off" inputmode="text">
 <input id="empresa" placeholder="Empresa">
 <input id="email" type="email" placeholder="E-mail">
 <input id="telefone" placeholder="Telefone">
@@ -445,17 +445,16 @@ function normalizarEmpresa(x){
   }
 }
 function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-function limparCNPJ(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function limparCNPJ(v){
+  // Aceita CNPJ antigo numérico e CNPJ novo alfanumérico.
+  // Remove apenas pontuação/espaços, preservando letras e números.
+  return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,14);
+}
 function normalizarCNPJBusca(v){
   const c = limparCNPJ(v);
   if(!c) return '';
   const temLetra = /[A-Z]/.test(c);
   return (!temLetra && c.length < 14) ? c.padStart(14, '0') : c;
-}
-function formatarCNPJAlfa(v){
-  // Mantém o CNPJ em formato digitável, aceitando números e letras.
-  // Não aplica máscara automática para evitar embaralhar o cursor durante a digitação.
-  return limparCNPJ(v).slice(0,14);
 }
 function cnpjMesmo(a,b){
   const ca = limparCNPJ(a);
@@ -684,9 +683,11 @@ async function buscarEmpresaCentralPorCNPJ(cnpjDigitado){
 let timerBuscaCNPJ = null;
 async function preencherEmpresaPorCNPJ(){
   const c = normalizarCNPJBusca(cnpj.value);
-  cnpj.value = formatarCNPJAlfa(c);
 
-  if(c.length < 12) return;
+  if(c.length < 14){
+    if(msgSistema) msgSistema.textContent = '';
+    return;
+  }
 
   try{
     if(msgSistema) msgSistema.textContent = 'Buscando empresa na base central...';
@@ -706,12 +707,16 @@ async function preencherEmpresaPorCNPJ(){
 
 function agendarBuscaEmpresaPorCNPJ(){
   clearTimeout(timerBuscaCNPJ);
-  timerBuscaCNPJ = setTimeout(preencherEmpresaPorCNPJ, 300);
+  const c = normalizarCNPJBusca(cnpj.value);
+  if(c.length < 14){
+    if(msgSistema) msgSistema.textContent = '';
+    return;
+  }
+  timerBuscaCNPJ = setTimeout(preencherEmpresaPorCNPJ, 600);
 }
 
 cnpj.addEventListener('input', function(){
-  const valorLimpo = formatarCNPJAlfa(this.value);
-  if(this.value !== valorLimpo) this.value = valorLimpo;
+  // Não aplica máscara automática. Isso evita travar a digitação e já prepara CNPJ com letras.
   agendarBuscaEmpresaPorCNPJ();
 });
 cnpj.addEventListener('change', preencherEmpresaPorCNPJ);
