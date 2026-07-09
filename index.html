@@ -341,10 +341,33 @@ function abrirComLoginUnico(){
   return true;
 }
 
+function normalizarResponsavelGestao(valor){
+  const nome = String(valor || '').trim();
+  const n = nome.toLowerCase();
+
+  if(!nome) return '';
+  if(n === 'tamila' || n === 'tamilla' || n.includes('tamilla pereira') || n.includes('tamila pereira')){
+    return 'Tamilla Pereira';
+  }
+  if(n === 'tassio' || n === 'tássio' || n.includes('tassio borges') || n.includes('tássio borges')){
+    return 'Tassio Borges';
+  }
+
+  return nome;
+}
+
 function responsavelUsuario(){
-  return usuarioLogado
-    ? (usuarioLogado.consultorVinculado || usuarioLogado.vendedorVinculado || usuarioLogado.nome || '')
-    : '';
+  if(!usuarioLogado) return '';
+
+  return normalizarResponsavelGestao(
+    usuarioLogado.consultorVinculado ||
+    usuarioLogado.vendedorVinculado ||
+    usuarioLogado.VendedorVinculado ||
+    usuarioLogado.vendedorvinculado ||
+    usuarioLogado.nome ||
+    usuarioLogado.Nome ||
+    ''
+  );
 }
 
 function isAdm(){
@@ -356,6 +379,8 @@ function aplicarPermissoesUsuario(){
 
   if(!isAdm()){
     const resp = responsavelUsuario();
+
+    responsavelSomesso.innerHTML = `<option value="${esc(resp)}">${esc(resp)}</option>`;
     responsavelSomesso.value = resp;
     responsavelSomesso.disabled = true;
 
@@ -502,6 +527,11 @@ async function adicionar(){
   const responsavelFinal = isAdm()
     ? responsavelSomesso.value.trim()
     : responsavelUsuario();
+
+  if(!responsavelFinal){
+    alert('Usuário sem responsável vinculado. Verifique o nome ou vínculo do usuário na aba Usuarios.');
+    return;
+  }
 
   let obj={
     id:editandoId||'',
