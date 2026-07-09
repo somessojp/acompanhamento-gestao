@@ -391,13 +391,13 @@ async function carregarEmpresasPortalCentral(){
 
     // Primeiro carrega eventuais empresas da própria Gestão.
     empresas.forEach(e => {
-      const c = limparCNPJ(e.cnpj);
+      const c = normalizarCNPJBusca(e.cnpj);
       if(c) mapa[c] = {...e, cnpj:c};
     });
 
     // Depois sobrepõe com a base central do Portal, que é a fonte principal.
     lista.forEach(e => {
-      const c = limparCNPJ(e.cnpj);
+      const c = normalizarCNPJBusca(e.cnpj);
       if(c) mapa[c] = {...(mapa[c] || {}), ...e, cnpj:c};
     });
 
@@ -421,6 +421,18 @@ function normalizarEmpresa(x){
 }
 function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
 function limparCNPJ(v){return String(v||'').replace(/\D/g,'')}
+function normalizarCNPJBusca(v){
+  const c = limparCNPJ(v);
+  if(!c) return '';
+  return c.length < 14 ? c.padStart(14, '0') : c;
+}
+function cnpjMesmo(a,b){
+  const ca = limparCNPJ(a);
+  const cb = limparCNPJ(b);
+  const na = normalizarCNPJBusca(a);
+  const nb = normalizarCNPJBusca(b);
+  return !!ca && !!cb && (ca === cb || na === nb || ca.endsWith(cb) || cb.endsWith(ca));
+}
 function itensVisiveis(){
   let lista = itens;
 
@@ -608,11 +620,11 @@ function aplicarEmpresaNoFormulario(emp){
 }
 
 async function buscarEmpresaCentralPorCNPJ(cnpjDigitado){
-  const c = limparCNPJ(cnpjDigitado);
-  if(c.length !== 14) return null;
+  const c = normalizarCNPJBusca(cnpjDigitado);
+  if(c.length < 12) return null;
 
-  // Primeiro tenta na memória.
-  let emp = empresas.find(e => limparCNPJ(e.cnpj || e.CNPJ) === c);
+  // Primeiro tenta na memória. Aceita CNPJ com zero inicial perdido pela planilha.
+  let emp = empresas.find(e => cnpjMesmo(e.cnpj || e.CNPJ, c));
   if(emp) return emp;
 
   // Depois consulta diretamente a base central do Portal, sem depender do carregamento inicial.
@@ -621,24 +633,24 @@ async function buscarEmpresaCentralPorCNPJ(cnpjDigitado){
 
   const mapa = {};
   empresas.forEach(e => {
-    const key = limparCNPJ(e.cnpj || e.CNPJ);
+    const key = normalizarCNPJBusca(e.cnpj || e.CNPJ);
     if(key) mapa[key] = normalizarEmpresa(e);
   });
   lista.forEach(e => {
-    const key = limparCNPJ(e.cnpj || e.CNPJ);
+    const key = normalizarCNPJBusca(e.cnpj || e.CNPJ);
     if(key) mapa[key] = {...(mapa[key] || {}), ...e, cnpj:key};
   });
   empresas = Object.values(mapa);
 
-  return empresas.find(e => limparCNPJ(e.cnpj || e.CNPJ) === c) || null;
+  return empresas.find(e => cnpjMesmo(e.cnpj || e.CNPJ, c)) || null;
 }
 
 let timerBuscaCNPJ = null;
 async function preencherEmpresaPorCNPJ(){
-  const c = limparCNPJ(cnpj.value);
+  const c = normalizarCNPJBusca(cnpj.value);
   cnpj.value = c;
 
-  if(c.length < 14) return;
+  if(c.length < 12) return;
 
   try{
     if(msgSistema) msgSistema.textContent = 'Buscando empresa na base central...';
