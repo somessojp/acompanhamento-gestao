@@ -420,11 +420,20 @@ function normalizarEmpresa(x){
   }
 }
 function esc(v){return String(v??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-function limparCNPJ(v){return String(v||'').replace(/\D/g,'')}
+function limparCNPJ(v){return String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
 function normalizarCNPJBusca(v){
   const c = limparCNPJ(v);
   if(!c) return '';
-  return c.length < 14 ? c.padStart(14, '0') : c;
+  const temLetra = /[A-Z]/.test(c);
+  return (!temLetra && c.length < 14) ? c.padStart(14, '0') : c;
+}
+function formatarCNPJAlfa(v){
+  const s = limparCNPJ(v).slice(0,14);
+  if(s.length <= 2) return s;
+  if(s.length <= 5) return s.slice(0,2)+'.'+s.slice(2);
+  if(s.length <= 8) return s.slice(0,2)+'.'+s.slice(2,5)+'.'+s.slice(5);
+  if(s.length <= 12) return s.slice(0,2)+'.'+s.slice(2,5)+'.'+s.slice(5,8)+'/'+s.slice(8);
+  return s.slice(0,2)+'.'+s.slice(2,5)+'.'+s.slice(5,8)+'/'+s.slice(8,12)+'-'+s.slice(12);
 }
 function cnpjMesmo(a,b){
   const ca = limparCNPJ(a);
@@ -648,7 +657,7 @@ async function buscarEmpresaCentralPorCNPJ(cnpjDigitado){
 let timerBuscaCNPJ = null;
 async function preencherEmpresaPorCNPJ(){
   const c = normalizarCNPJBusca(cnpj.value);
-  cnpj.value = c;
+  cnpj.value = formatarCNPJAlfa(c);
 
   if(c.length < 12) return;
 
@@ -673,7 +682,7 @@ function agendarBuscaEmpresaPorCNPJ(){
   timerBuscaCNPJ = setTimeout(preencherEmpresaPorCNPJ, 300);
 }
 
-cnpj.addEventListener('input', agendarBuscaEmpresaPorCNPJ);
+cnpj.addEventListener('input', function(){ this.value = formatarCNPJAlfa(this.value); agendarBuscaEmpresaPorCNPJ(); });
 cnpj.addEventListener('change', preencherEmpresaPorCNPJ);
 cnpj.addEventListener('blur', preencherEmpresaPorCNPJ);
 filtro.addEventListener('keyup', render);
