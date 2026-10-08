@@ -722,8 +722,53 @@ cnpj.addEventListener('input', function(){
 cnpj.addEventListener('change', preencherEmpresaPorCNPJ);
 cnpj.addEventListener('blur', preencherEmpresaPorCNPJ);
 filtro.addEventListener('keyup', render);
-function exportarExcel(){let dados=itensVisiveis().map(item=>({'Responsável Somesso':item.responsavelSomesso,'CNPJ':item.cnpj,'Empresa':item.empresa,'E-mail':item.email,'Telefone':item.telefone,'Palestras':item.palestras,'S-2210':item.s2210,'S-2220':item.s2220,'S-2240':item.s2240,'ASO':item.aso,'Renovação':item.renovacao}));let ws=XLSX.utils.json_to_sheet(dados);let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gestão');XLSX.writeFile(wb,'acompanhamento_empresas.xlsx')}
-function gerarPDF(){const {jsPDF}=window.jspdf;let doc=new jsPDF('landscape');doc.text('Acompanhamento Empresas Gestão',14,15);let rows=itensVisiveis().map(item=>[item.responsavelSomesso,item.cnpj,item.empresa,item.email,item.telefone,item.palestras,item.s2210,item.s2220,item.s2240,item.aso,item.renovacao]);doc.autoTable({startY:25,head:[['Responsável','CNPJ','Empresa','Email','Telefone','Resp. Empresa','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],body:rows,styles:{fontSize:7}});doc.save('acompanhamento_empresas.pdf')}
+function exportarExcel(){
+  const dados=itensVisiveis().map(item=>({
+    'Responsável Somesso':item.responsavelSomesso,
+    'CNPJ':item.cnpj,
+    'Empresa':item.empresa,
+    'E-mail':item.email,
+    'Telefone':item.telefone,
+    'Contato':item.contato,
+    'Palestras':item.palestras,
+    'S-2210':item.s2210,
+    'S-2220':item.s2220,
+    'S-2240':item.s2240,
+    'ASO':item.aso,
+    'Renovação':item.renovacao
+  }));
+  const ws=XLSX.utils.json_to_sheet(dados);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Gestão');
+  XLSX.writeFile(wb,'acompanhamento_empresas.xlsx');
+}
+
+function gerarPDF(){
+  const {jsPDF}=window.jspdf;
+  let doc=new jsPDF('landscape');
+  doc.text('Acompanhamento Empresas Gestão',14,15);
+  let rows=itensVisiveis().map(item=>[
+    item.responsavelSomesso,
+    item.cnpj,
+    item.empresa,
+    item.email,
+    item.telefone,
+    item.contato,
+    item.palestras,
+    item.s2210,
+    item.s2220,
+    item.s2240,
+    item.aso,
+    item.renovacao
+  ]);
+  doc.autoTable({
+    startY:25,
+    head:[['Responsável','CNPJ','Empresa','E-mail','Telefone','Contato','Palestras','S-2210','S-2220','S-2240','ASO','Renovação']],
+    body:rows,
+    styles:{fontSize:7}
+  });
+  doc.save('acompanhamento_empresas.pdf');
+}
 window.addEventListener('load', async () => {
   if(abrirComLoginUnico()) return;
   const email = obterEmailPortal();
