@@ -215,7 +215,7 @@ a:hover{
 <div class="box">
 <h2>ACOMPANHAMENTO EMPRESAS GESTÃO</h2>
 
-<div class="grid">
+<div class="grid" id="formGestao">
 <select id="responsavelSomesso">
 <option value="">Selecione o responsável Somesso</option>
 <option value="Tassio Borges">Tassio Borges</option>
@@ -259,7 +259,8 @@ let editandoId = null;
 let usuarioLogado = null;
 
 async function api(acao, dados={}){
-  const resp = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({acao, ...dados})});
+  const emailUsuario = usuarioLogado?.email || localStorage.getItem('usuario_gestao_email') || localStorage.getItem('portal_usuario_email') || '';
+  const resp = await fetch(API_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify({acao, emailUsuario, ...dados})});
   const txt = await resp.text();
   try{return JSON.parse(txt)}catch(e){console.error(txt);throw new Error('Resposta inválida da API')}
 }
@@ -370,14 +371,23 @@ function responsavelUsuario(){
   );
 }
 
-function isAdm(){
-  return String(usuarioLogado?.perfil || '').toUpperCase().trim() === 'ADM';
-}
+function perfilUsuario(){ return String(usuarioLogado?.perfil || '').toUpperCase().trim(); }
+function isAdm(){ return perfilUsuario() === 'ADM'; }
+function isVisualizador(){ return perfilUsuario() === 'VISUALIZADOR'; }
+function podeEditar(){ return !isVisualizador(); }
 
 function aplicarPermissoesUsuario(){
   if(!usuarioLogado) return;
-
-  if(!isAdm()){
+  const viewer = isVisualizador();
+  const form = document.getElementById('formGestao');
+  if(form) form.style.display = viewer ? 'none' : '';
+  const botoes = document.getElementById('btnAdicionar');
+  const cancelar = document.getElementById('btnCancelar');
+  if(botoes) botoes.style.display = viewer ? 'none' : '';
+  if(cancelar) cancelar.style.display = viewer ? 'none' : (editandoId ? 'inline-block' : 'none');
+  const modal = document.getElementById('modalEmpresas');
+  if(viewer && modal) modal.style.display = 'none';
+  if(!isAdm() && !viewer){
     const resp = responsavelUsuario();
 
     responsavelSomesso.innerHTML = `<option value="${esc(resp)}">${esc(resp)}</option>`;
@@ -466,7 +476,7 @@ function cnpjMesmo(a,b){
 function itensVisiveis(){
   let lista = itens;
 
-  if(usuarioLogado && !isAdm()){
+  if(usuarioLogado && !isAdm() && !isVisualizador()){
     const meuNome = String(usuarioLogado.nome || '').toLowerCase().trim();
     const meuVinculo = String(responsavelUsuario()).toLowerCase().trim();
 
@@ -497,6 +507,9 @@ function itensVisiveis(){
 
 function render(){
   tb.innerHTML='';
+  const viewer = isVisualizador();
+  const thAcoes = document.querySelector('#tab thead th:last-child');
+  if(thAcoes) thAcoes.style.display = viewer ? 'none' : '';
 
   const visiveis = itensVisiveis();
 
@@ -506,7 +519,7 @@ function render(){
     if(String(item.palestras).toLowerCase()==='sim') palestrasSim++;
     if(String(item.renovacao).toLowerCase()==='sim') renovacaoSim++;
 
-    tb.innerHTML += `<tr><td>${esc(item.responsavelSomesso)}</td><td>${esc(item.cnpj)}</td><td>${esc(item.empresa)}</td><td>${esc(item.email)}</td><td>${esc(item.telefone)}</td><td>${esc(item.contato)}</td><td>${esc(item.palestras)}</td><td>${esc(item.s2210)}</td><td>${esc(item.s2220)}</td><td>${esc(item.s2240)}</td><td>${esc(item.aso)}</td><td>${esc(item.renovacao)}</td><td class="acoes"><button onclick="editarPorId('${item.id}')">Editar</button><button class="excluir" onclick="excluirItem('${item.id}')">Excluir</button></td></tr>`;
+    tb.innerHTML += `<tr><td>${esc(item.responsavelSomesso)}</td><td>${esc(item.cnpj)}</td><td>${esc(item.empresa)}</td><td>${esc(item.email)}</td><td>${esc(item.telefone)}</td><td>${esc(item.contato)}</td><td>${esc(item.palestras)}</td><td>${esc(item.s2210)}</td><td>${esc(item.s2220)}</td><td>${esc(item.s2240)}</td><td>${esc(item.aso)}</td><td>${esc(item.renovacao)}</td>${viewer ? '' : `<td class="acoes"><button onclick="editarPorId('${item.id}')">Editar</button><button class="excluir" onclick="excluirItem('${item.id}')">Excluir</button></td>`}</tr>`;
   });
 
   ct.innerText=visiveis.length;
@@ -520,6 +533,7 @@ function limparCampos(){
   aplicarPermissoesUsuario();
 }
 async function adicionar(){
+  if(!podeEditar()){ alert('Seu perfil é somente para visualização.'); return; }
   const responsavelFinal = isAdm()
     ? responsavelSomesso.value.trim()
     : responsavelUsuario();
@@ -579,6 +593,7 @@ async function adicionar(){
 }
 
 function editarPorId(id){
+  if(!podeEditar()){ alert('Seu perfil é somente para visualização.'); return; }
   let item=itens.find(x=>String(x.id)===String(id));
   if(!item) return;
 
@@ -615,6 +630,7 @@ function editarPorId(id){
 function editar(index){const item = itens[index]; if(item) editarPorId(item.id)}
 function cancelarEdicao(){editandoId=null; btnAdicionar.innerText='Adicionar'; btnCancelar.style.display='none'; limparCampos()}
 async function excluirItem(id){
+  if(!podeEditar()){ alert('Seu perfil é somente para visualização.'); return; }
   let item=itens.find(x=>String(x.id)===String(id));
 
   if(!item){
@@ -644,8 +660,8 @@ async function excluirItem(id){
     alert('Erro ao excluir: '+e.message)
   }
 }
-function abrirCadastroEmpresas(){modalEmpresas.style.display='block'} function fecharCadastroEmpresas(){modalEmpresas.style.display='none'}
-async function salvarCadastroEmpresa(){let obj={cnpj:limparCNPJ(cadCnpj.value),empresa:cadEmpresa.value.trim(),email:cadEmail.value.trim(),telefone:cadTelefone.value.trim(),responsavelEmpresa:''}; if(obj.cnpj.length!==14){alert('CNPJ inválido');return} for(let k in obj){if(!obj[k]){alert('Preencha todos os campos da empresa.');return}} try{let r=await api('salvarEmpresa',obj); if(!r.ok){alert(r.erro||'Erro ao salvar empresa.');return} fecharCadastroEmpresas(); cadCnpj.value=cadEmpresa.value=cadEmail.value=cadTelefone.value=''; await carregarDados(); alert('Empresa cadastrada com sucesso!')}catch(e){alert('Erro ao salvar empresa: '+e.message)}}
+function abrirCadastroEmpresas(){if(!podeEditar()){alert('Seu perfil é somente para visualização.');return;}modalEmpresas.style.display='block'} function fecharCadastroEmpresas(){modalEmpresas.style.display='none'}
+async function salvarCadastroEmpresa(){if(!podeEditar()){alert('Seu perfil é somente para visualização.');return;}let obj={cnpj:limparCNPJ(cadCnpj.value),empresa:cadEmpresa.value.trim(),email:cadEmail.value.trim(),telefone:cadTelefone.value.trim(),responsavelEmpresa:''}; if(obj.cnpj.length!==14){alert('CNPJ inválido');return} for(let k in obj){if(!obj[k]){alert('Preencha todos os campos da empresa.');return}} try{let r=await api('salvarEmpresa',obj); if(!r.ok){alert(r.erro||'Erro ao salvar empresa.');return} fecharCadastroEmpresas(); cadCnpj.value=cadEmpresa.value=cadEmail.value=cadTelefone.value=''; await carregarDados(); alert('Empresa cadastrada com sucesso!')}catch(e){alert('Erro ao salvar empresa: '+e.message)}}
 function aplicarEmpresaNoFormulario(emp){
   if(!emp) return false;
   empresa.value = emp.empresa || emp.Empresa || '';
